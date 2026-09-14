@@ -1,0 +1,26 @@
+---
+- name: Provisionar infraestrutura local do AIOps Agent
+  hosts: local
+  gather_facts: false
+  tasks:
+    - name: Verificar se minikube já está rodando
+      ansible.builtin.command: minikube status
+      register: minikube_status
+      failed_when: false
+      changed_when: false
+
+    - name: Iniciar cluster Minikube
+      ansible.builtin.command: minikube start --cpus=4 --memory=6g
+      when: "'Running' not in minikube_status.stdout"
+
+    - name: Instalar Prometheus via Helm
+      kubernetes.core.helm:
+        name: prometheus
+        chart_ref: prometheus-community/kube-prometheus-stack
+        release_namespace: monitoring
+        create_namespace: true
+
+    - name: Aplicar manifests da aplicação de exemplo
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../../k8s/manifests/"

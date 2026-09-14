@@ -1,0 +1,11 @@
+---
+- name: Escalar réplicas de um deployment
+  hosts: local
+  gather_facts: false
+  tasks:
+    - name: Aplicar novo número de réplicas
+      kubernetes.core.k8s_scale:
+        kind: Deployment
+        name: "{{ target_deployment }}"
+        namespace: "{{ target_namespace | default('default') }}"
+        replicas: "{{ target_replicas }}"
