@@ -13,6 +13,11 @@
       ansible.builtin.command: minikube start --cpus=4 --memory=6g
       when: "'Running' not in minikube_status.stdout"
 
+    - name: Build da imagem da aplicação de exemplo dentro do Minikube
+      ansible.builtin.command: >
+        minikube image build -t aiops-sample-app:local
+        {{ playbook_dir }}/../../../app
+
     - name: Adicionar repositório Prometheus Community
       kubernetes.core.helm_repository:
         name: prometheus-community
@@ -31,9 +36,13 @@
         src: "{{ item }}"
       loop:
         - "{{ playbook_dir }}/../../k8s/manifests/namespace.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/configmap.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/deployment.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/service.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-configmap.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-deployment.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-service.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-a-deployment.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-a-service.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-b-deployment.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-b-service.yaml"
 
     - name: Aguardar CRD do ServiceMonitor ficar disponível
       kubernetes.core.k8s_info:

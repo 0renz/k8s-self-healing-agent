@@ -1,32 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sample-app
+  name: service-a
   namespace: sample-app
   labels:
-    app: sample-app
+    app: service-a
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: sample-app
+      app: service-a
   template:
     metadata:
       labels:
-        app: sample-app
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8000"
-        prometheus.io/path: "/metrics"
+        app: service-a
     spec:
       containers:
-        - name: sample-app
-          image: kennethreitz/httpbin  # placeholder — trocar pela app FastAPI real
+        - name: service-a
+          image: aiops-sample-app:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
-          envFrom:
-            - configMapRef:
-                name: sample-app-config
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "service-a"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+            - name: UPSTREAM_URL
+              value: "http://service-b:8001/api/data"
+            - name: PORT
+              value: "8000"
           resources:
             requests:
               cpu: "50m"
@@ -36,13 +39,13 @@ spec:
               memory: "128Mi"
           livenessProbe:
             httpGet:
-              path: /status/200
+              path: /
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /status/200
+              path: /
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 5
