@@ -27,7 +27,7 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector:4317"
             - name: UPSTREAM_URL
-              value: "http://service-b:8001/api/data"
+              value: "http://service-b:8001/"
             - name: PORT
               value: "8000"
           resources:
