@@ -1,0 +1,7 @@
+#anthropic
+#openai
+openrouter
+pyyaml
+requests
+langgraph
+dotenv
