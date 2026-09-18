@@ -1,11 +1,68 @@
 ---
-- name: Escalar réplicas de um deployment
+- name: "[Remediação] Escalar réplicas de um deployment"
   hosts: local
   gather_facts: false
+  vars_files:
+    - vars/safety.yml
+  vars:
+    target_namespace: sample-app
   tasks:
+    - name: Validar se namespace é permitido
+      ansible.builtin.fail:
+        msg: "Namespace '{{ target_namespace }}' não está na allowlist de remediação: {{ allowed_namespaces }}"
+      when: target_namespace not in allowed_namespaces
+  
+    - name: Validar se target_deployment e target_replicas foram informados
+      ansible.builtin.fail:
+        msg: "Variáveis obrigatórias 'target_deployment' e/ou 'target_replicas' não foram fornecidas."
+      when: >
+        target_deployment is not defined or target_deployment | length == 0
+        or target_replicas is not defined
+
+    - name: Validar se deployment está na allowlist
+      ansible.builtin.fail:
+        msg: "Deployment '{{ target_deployment }}' não está na allowlist de remediação: {{ allowed_deployments }}"
+      when: target_deployment not in allowed_deployments
+
+    - name: Validar se target_replicas está dentro do limite seguro
+      ansible.builtin.fail:
+        msg: >
+          target_replicas={{ target_replicas }} fora do intervalo seguro
+          [{{ min_replicas }}, {{ max_replicas }}].
+      when: >
+        target_replicas | int < min_replicas | int
+        or target_replicas | int > max_replicas | int
+
+    - name: Verificar se o deployment existe de fato no cluster
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: "{{ target_deployment }}"
+        namespace: "{{ target_namespace }}"
+      register: deployment_lookup
+
+    - name: Abortar se o deployment não existir
+      ansible.builtin.fail:
+        msg: "Deployment '{{ target_deployment }}' não encontrado no namespace '{{ target_namespace }}'."
+      when: deployment_lookup.resources | length == 0
+
+    - name: Capturar réplicas atuais (para o log de auditoria)
+      ansible.builtin.set_fact:
+        previous_replicas: "{{ deployment_lookup.resources[0].spec.replicas }}"
+
     - name: Aplicar novo número de réplicas
       kubernetes.core.k8s_scale:
         kind: Deployment
         name: "{{ target_deployment }}"
-        namespace: "{{ target_namespace | default('default') }}"
-        replicas: "{{ target_replicas }}"
+        namespace: "{{ target_namespace }}"
+        replicas: "{{ target_replicas | int }}"
+      register: scale_result
+
+    - name: Registrar resultado estruturado para auditoria
+      ansible.builtin.debug:
+        msg:
+          action: "scale_replicas"
+          namespace: "{{ target_namespace }}"
+          deployment: "{{ target_deployment }}"
+          previous_replicas: "{{ previous_replicas }}"
+          new_replicas: "{{ target_replicas }}"
+          changed: "{{ scale_result.changed }}"

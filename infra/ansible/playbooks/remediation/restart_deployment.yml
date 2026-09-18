@@ -1,15 +1,44 @@
 ---
-- name: Reiniciar deployment em resposta a diagnóstico do agente
-  hosts: local
+- name: "[Remediação] Reiniciar deployment"
+  hosts: localhost
   gather_facts: false
+  vars_files:
+    - vars/safety.yml
   vars:
-    target_namespace: default
+    target_namespace: sample-app
   tasks:
-    - name: Registrar ação antes da execução
-      ansible.builtin.debug:
-        msg: "Reiniciando {{ target_deployment }} no namespace {{ target_namespace }}"
+    - name: Validar se namespace é permitido
+      ansible.builtin.fail:
+        msg: "Namespace '{{ target_namespace }}' não está na allowlist de remediação: {{ allowed_namespaces }}"
+      when: target_namespace not in allowed_namespaces
 
-    - name: Rollout restart via módulo k8s
+    - name: Validar se target_deployment foi informado
+      ansible.builtin.fail:
+        msg: "Variável obrigatória 'target_deployment' não foi fornecida."
+      when: target_deployment is not defined or target_deployment | length == 0
+
+    - name: Validar se deployment está na allowlist
+      ansible.builtin.fail:
+        msg: "Deployment '{{ target_deployment }}' não está na allowlist de remediação: {{ allowed_deployments }}"
+      when: target_deployment not in allowed_deployments
+
+    - name: Verificar se o deployment existe de fato no cluster
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: "{{ target_deployment }}"
+        namespace: "{{ target_namespace }}"
+      register: deployment_lookup
+
+    - name: Abortar se o deployment não existir
+      ansible.builtin.fail:
+        msg: "Deployment '{{ target_deployment }}' não encontrado no namespace '{{ target_namespace }}'."
+      when: deployment_lookup.resources | length == 0
+
+    - name: Capturar timestamp da ação (UTC, ISO8601)
+      ansible.builtin.set_fact:
+        remediation_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+    - name: Aplicar rollout restart via patch de annotation
       kubernetes.core.k8s:
         state: patched
         kind: Deployment
@@ -20,6 +49,14 @@
             template:
               metadata:
                 annotations:
-                  kubectl.kubernetes.io/restartedAt: "{{ ansible_date_time.iso8601 }}"
-      vars:
-        ansible_date_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+                  kubectl.kubernetes.io/restartedAt: "{{ remediation_timestamp }}"
+      register: restart_result
+
+    - name: Registrar resultado estruturado para auditoria
+      ansible.builtin.debug:
+        msg:
+          action: "restart_deployment"
+          namespace: "{{ target_namespace }}"
+          deployment: "{{ target_deployment }}"
+          timestamp: "{{ remediation_timestamp }}"
+          changed: "{{ restart_result.changed }}"

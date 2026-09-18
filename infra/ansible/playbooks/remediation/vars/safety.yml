@@ -1,0 +1,9 @@
+---
+allowed_namespaces: sample-app
+
+allowed_deployments:
+  - service-a
+  - service-b
+
+max_replicas: 5
+min_replicas: 1
