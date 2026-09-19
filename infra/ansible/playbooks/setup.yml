@@ -35,14 +35,14 @@
         state: present
         src: "{{ item }}"
       loop:
-        - "{{ playbook_dir }}/../../k8s/manifests/namespace.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-configmap.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-deployment.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-service.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/service-a-deployment.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/service-a-service.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/service-b-deployment.yaml"
-        - "{{ playbook_dir }}/../../k8s/manifests/service-b-service.yaml"
+        - "{{ playbook_dir }}/../../k8s/manifests/namespace.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-configmap.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-deployment.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/otel-collector-service.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-a-deployment.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-a-service.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-b-deployment.yml"
+        - "{{ playbook_dir }}/../../k8s/manifests/service-b-service.yml"
 
     - name: Aguardar CRD do ServiceMonitor ficar disponível
       kubernetes.core.k8s_info:
@@ -57,4 +57,4 @@
     - name: Aplicar ServiceMonitor da aplicação de exemplo
       kubernetes.core.k8s:
         state: present
-        src: "{{ playbook_dir }}/../../k8s/manifests/servicemonitor.yaml"
+        src: "{{ playbook_dir }}/../../k8s/manifests/servicemonitor.yml"

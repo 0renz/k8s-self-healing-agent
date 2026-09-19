@@ -19,14 +19,14 @@ spec:
         - name: otel-collector
           image: otel/opentelemetry-collector-contrib:latest
           args:
-            - "--config=/etc/otelcol-contrib/config.yaml"
+            - "--config=/etc/otelcol-contrib/config.yml"
           ports:
             - containerPort: 4317   # OTLP gRPC (receiver)
             - containerPort: 8889   # Prometheus exporter (scrape)
           volumeMounts:
             - name: otel-config
-              mountPath: /etc/otelcol-contrib/config.yaml
-              subPath: config.yaml
+              mountPath: /etc/otelcol-contrib/config.yml
+              subPath: config.yml
       volumes:
         - name: otel-config
           configMap:
